@@ -5,43 +5,123 @@
     <title>Public Chat</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #1a202c;
+            color: #e2e8f0;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 2rem;
+        }
+
+        h2 {
+            margin-top: 0;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        input[type="text"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            border: 1px solid #4a5568;
+            background-color: #2d3748;
+            color: #e2e8f0;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            background-color: #6b7280;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        button:hover {
+            background-color: #e2e8f0;
+            color: #1a202c;
+        }
+
+        #response {
+            height: 250px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+        }
+
+        #response p {
+            margin: 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #4a5568;
+        }
+
+        #response p:last-child {
+            border-bottom: none;
+        }
+    </style>
 </head>
 <body>
 
-    <div id="user-login">
-        <h2>Choose a nickname</h2>
-        <input type="text" id="sender" placeholder="Your nickname" required/>
-        <button id="connect" onclick="connect();">Connect</button>
-        <button id="disconnect" disabled="disabled" onclick="disconnect();">Disconnect</button>
-    </div>
-    <br>
-    <div id="chat-div" style="visibility: hidden">
-        <h2>Public chat</h2>
-        <input type="text" id="message" placeholder="Write a message..."/>
-        <button id="send" onclick="sendMessage();">Send</button>
-        <p id="response"></p>
+    <div class="container">
+        <div id="user-login">
+            <h2>Choose a nickname</h2>
+            <input type="text" id="sender" placeholder="Your nickname" required/>
+            <div>
+                <button id="connect" onclick="connect()">Connect</button>
+            </div>
+        </div>
+
+        <div id="chat-div" style="display: none">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2>Public Chat</h2>
+                <button id="disconnect" onclick="disconnect()">Disconnect</button>
+            </div>
+            <div id="response"></div>
+            <div style="display: flex">
+                <input type="text" id="message" placeholder="Write a message..." style="flex-grow: 1; margin-bottom: 0;"/>
+                <button id="send" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        let connectBtn = document.getElementById('connect')
-        let disconnectBtn = document.getElementById('disconnect')
-        let chatDiv = document.getElementById('chat-div')
-        let response = document.getElementById('response')
-        let sender = null
-        let message = document.getElementById('message')
+        const chatDiv = document.getElementById('chat-div')
+        const responseDiv = document.getElementById('response')
+        const senderInput = document.getElementById('sender')
+        const messageInput = document.getElementById('message')
+        const userLoginDiv = document.getElementById('user-login')
 
-        let stompClient = null;
+        let stompClient = null
+        let sender = null
 
         function setConnected(connected) {
-            connectBtn.disabled = connected
-            disconnectBtn.disabled = !connected
-            sender = document.getElementById('sender').value.trim()
-            chatDiv.style.visibility
-                = connected ? 'visible' : 'hidden'
-            response.innerHTML = ''
+            if (connected) {
+                userLoginDiv.style.display = 'none'
+                chatDiv.style.display = 'block'
+            } else {
+                userLoginDiv.style.display = 'block'
+                chatDiv.style.display = 'none'
+            }
+            responseDiv.innerHTML = ''
         }
 
         function connect() {
+            sender = senderInput.value.trim()
+            if (!sender) {
+                alert("Please, choose a nickname")
+                return
+            }
             let socket = new SockJS('/pubchat-websocket')
             stompClient = Stomp.over(socket)
             stompClient.connect({}, function(frame) {
@@ -61,18 +141,22 @@
         }
 
         function sendMessage() {
-            let msgText = message.value
-            stompClient.send("/pubchat/chat", {},
-                JSON.stringify({'sender':sender, 'message':msgText}))
-            message.value = ''
+            let msgText = messageInput.value.trim()
+            if (msgText) {
+                stompClient.send("/pubchat/chat", {},
+                    JSON.stringify({'sender': sender, 'message': msgText}))
+                messageInput.value = ''
+            }
         }
 
         function showMessageOutput(messageOutput) {
             let p = document.createElement('p')
-            p.appendChild(document.createTextNode(messageOutput.sender + ": "
-                + messageOutput.message))
-            response.appendChild(p)
+            p.textContent = `${messageOutput.sender}: ${messageOutput.message}`
+            responseDiv.appendChild(p)
+            responseDiv.scrollTop = responseDiv.scrollHeight
         }
+
+        setConnected(false)
     </script>
 
 </body>
