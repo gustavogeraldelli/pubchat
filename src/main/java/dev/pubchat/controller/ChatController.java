@@ -27,4 +27,12 @@ public class ChatController {
         String topic = "/topic/room/" + roomId;
         messagingTemplate.convertAndSend(topic, message);
     }
+
+    @MessageMapping("/typing/{roomId}")
+    public void sendTypingStatus(@DestinationVariable String roomId, Message message) {
+        if (roomId.equals("global") || !repository.existsRoom(roomId))
+            return;
+        String topic = "/topic/room/" + roomId;
+        messagingTemplate.convertAndSend(topic, message);
+    }
 }

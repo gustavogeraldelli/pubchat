@@ -69,6 +69,13 @@
         #response p:last-child {
             border-bottom: none;
         }
+
+        #typing-indicator {
+            height: 1.25rem;
+            font-style: italic;
+            color: #a0aec0;
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -93,8 +100,9 @@
                 <button id="leave-room" onclick="goToRoom('global')">Back to Global</button>
             </div>
             <div id="response"></div>
+            <div id="is-typing"></div>
             <div style="display: flex">
-                <input type="text" id="message" placeholder="Write a message..." style="flex-grow: 1; margin-bottom: 0;"/>
+                <input type="text" id="message" oninput="sendTypingStatus()" placeholder="Write a message..." style="flex-grow: 1; margin-bottom: 0;"/>
                 <button id="send" onclick="sendMessage()">Send</button>
             </div>
         </div>
@@ -107,11 +115,13 @@
         const messageInput = document.getElementById('message')
         const userLoginDiv = document.getElementById('user-login')
         const roomTitle = document.getElementById('room-title')
+        const isTypingDiv = document.getElementById('is-typing')
 
         let stompClient = null
         let sender = null
         let currentRoom = 'global'
         let currentSub = null
+        let typingTimeout = null
 
         function setConnected(connected) {
             if (connected) {
@@ -149,22 +159,41 @@
             let msgText = messageInput.value.trim()
             if (msgText) {
                 stompClient.send(`/pubchat/room/${currentRoom}`, {},
-                    JSON.stringify({'sender': sender, 'message': msgText}))
+                    JSON.stringify({'sender': sender, 'message': msgText, 'type': 'CHAT' }))
                 messageInput.value = ''
             }
         }
 
-        function showMessageOutput(messageOutput) {
-            let p = document.createElement('p')
-            p.textContent = `${messageOutput.sender}: ${messageOutput.message}`
-            responseDiv.appendChild(p)
-            responseDiv.scrollTop = responseDiv.scrollHeight
+        function sendTypingStatus() {
+            if (stompClient && currentRoom !== 'global')
+                stompClient.send(`/pubchat/typing/${currentRoom}`, {},
+                    JSON.stringify({'sender': sender, 'type': 'TYPING'}))
+        }
+
+        function displayMessage(incomingMessage) {
+            switch (incomingMessage.type) {
+                case 'CHAT':
+                    if (isTypingDiv.textContent.includes(incomingMessage.sender))
+                        isTypingDiv.textContent = ''
+                    let p = document.createElement('p')
+                    p.textContent = `${incomingMessage.sender}: ${incomingMessage.message}`
+                    responseDiv.appendChild(p)
+                    responseDiv.scrollTop = responseDiv.scrollHeight
+                    break
+                case 'TYPING':
+                    if (incomingMessage.sender !== sender) {
+                        isTypingDiv.textContent = `${incomingMessage.sender} is typing...`
+                        clearTimeout(typingTimeout)
+                        typingTimeout = setTimeout(() => { isTypingDiv.textContent = ''; }, 5000)
+                    }
+            }
         }
 
         function goToRoom(room) {
             if (currentSub)
                 currentSub.unsubscribe()
             responseDiv.innerHTML = '' // since the url stays the same, the old chat messages needs to be cleaned
+            isTypingDiv.textContent = ''
 
             if (room === 'global') {
                 roomTitle.textContent = 'Public Chat'
@@ -179,8 +208,8 @@
                 document.getElementById('join-room').style.visibility = 'hidden'
             }
             currentRoom = room
-            currentSub = stompClient.subscribe(`/topic/room/${room}`, function (messageOutput) {
-                showMessageOutput(JSON.parse(messageOutput.body))
+            currentSub = stompClient.subscribe(`/topic/room/${room}`, function (incomingMessage) {
+                displayMessage(JSON.parse(incomingMessage.body))
             })
         }
 

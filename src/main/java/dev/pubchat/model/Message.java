@@ -2,5 +2,12 @@ package dev.pubchat.model;
 
 public record Message(
         String sender,
-        String message) {
+        String message,
+        MessageType type) {
+
+    public enum MessageType {
+        CHAT,
+        TYPING
+    }
+
 }
