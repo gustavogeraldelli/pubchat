@@ -165,13 +165,18 @@
             if (currentSub)
                 currentSub.unsubscribe()
             responseDiv.innerHTML = '' // since the url stays the same, the old chat messages needs to be cleaned
+
             if (room === 'global') {
                 roomTitle.textContent = 'Public Chat'
                 document.getElementById('leave-room').style.visibility = 'hidden'
+                document.getElementById('create-room').style.visibility = 'visible'
+                document.getElementById('join-room').style.visibility = 'visible'
             }
             else {
                 roomTitle.textContent = `Room ${room}`
                 document.getElementById('leave-room').style.visibility = 'visible'
+                document.getElementById('create-room').style.visibility = 'hidden'
+                document.getElementById('join-room').style.visibility = 'hidden'
             }
             currentRoom = room
             currentSub = stompClient.subscribe(`/topic/room/${room}`, function (messageOutput) {
@@ -182,19 +187,31 @@
         async function createRoom() {
             try {
                 const response = await fetch('/pubchat/rooms', { method: 'POST' })
-                const roomId = await response.text()
-                alert("Private room created!\nID: " + roomId)
-                goToRoom(roomId)
+                const room = await response.text()
+                alert("Private room created!\nID: " + room)
+                goToRoom(room)
             }
             catch (error) {
                 alert("Error creating a room")
             }
         }
 
-        function joinRoom() {
-            const roomId = prompt("Enter the room ID: ")
-            if (roomId && roomId.trim() !== '')
-                goToRoom(roomId.trim())
+        async function joinRoom() {
+            let room = prompt("Enter the room ID: ")
+            if (room && room.trim() !== '') {
+                room = room.trim()
+                try {
+                    // users cant use any id to join private rooms
+                    const available = await fetch(`/pubchat/rooms/${room}/available`)
+                    if (available.ok)
+                        goToRoom(room)
+                    else
+                        alert("Invalid ID")
+                }
+                catch (error) {
+                    alert("Error validating room")
+                }
+            }
         }
 
         setConnected(false)
