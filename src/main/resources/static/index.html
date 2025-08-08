@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Public Chat</title>
+    <title>pubchat app</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <style>
@@ -84,8 +84,13 @@
 
         <div id="chat-div" style="display: none">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h2>Public Chat</h2>
+                <h2 id="room-title">Public Chat</h2>
                 <button id="disconnect" onclick="disconnect()">Disconnect</button>
+            </div>
+            <div style="margin-bottom: 1rem; display: flex; gap: 10px;">
+                <button id="create-room" onclick="createRoom()">Create Room</button>
+                <button id="join-room" onclick="joinRoom()">Join Room</button>
+                <button id="leave-room" onclick="goToRoom('global')">Back to Global</button>
             </div>
             <div id="response"></div>
             <div style="display: flex">
@@ -101,9 +106,12 @@
         const senderInput = document.getElementById('sender')
         const messageInput = document.getElementById('message')
         const userLoginDiv = document.getElementById('user-login')
+        const roomTitle = document.getElementById('room-title')
 
         let stompClient = null
         let sender = null
+        let currentRoom = 'global'
+        let currentSub = null
 
         function setConnected(connected) {
             if (connected) {
@@ -124,12 +132,9 @@
             }
             let socket = new SockJS('/pubchat-websocket')
             stompClient = Stomp.over(socket)
-            stompClient.connect({}, function(frame) {
+            stompClient.connect({}, function() {
                 setConnected(true)
-                console.log('Connected: ' + frame)
-                stompClient.subscribe('/topic/global', function(messageOutput) {
-                    showMessageOutput(JSON.parse(messageOutput.body))
-                })
+                goToRoom('global')
             })
         }
 
@@ -143,7 +148,7 @@
         function sendMessage() {
             let msgText = messageInput.value.trim()
             if (msgText) {
-                stompClient.send("/pubchat/chat", {},
+                stompClient.send(`/pubchat/room/${currentRoom}`, {},
                     JSON.stringify({'sender': sender, 'message': msgText}))
                 messageInput.value = ''
             }
@@ -154,6 +159,42 @@
             p.textContent = `${messageOutput.sender}: ${messageOutput.message}`
             responseDiv.appendChild(p)
             responseDiv.scrollTop = responseDiv.scrollHeight
+        }
+
+        function goToRoom(room) {
+            if (currentSub)
+                currentSub.unsubscribe()
+            responseDiv.innerHTML = '' // since the url stays the same, the old chat messages needs to be cleaned
+            if (room === 'global') {
+                roomTitle.textContent = 'Public Chat'
+                document.getElementById('leave-room').style.visibility = 'hidden'
+            }
+            else {
+                roomTitle.textContent = `Room ${room}`
+                document.getElementById('leave-room').style.visibility = 'visible'
+            }
+            currentRoom = room
+            currentSub = stompClient.subscribe(`/topic/room/${room}`, function (messageOutput) {
+                showMessageOutput(JSON.parse(messageOutput.body))
+            })
+        }
+
+        async function createRoom() {
+            try {
+                const response = await fetch('/pubchat/rooms', { method: 'POST' })
+                const roomId = await response.text()
+                alert("Private room created!\nID: " + roomId)
+                goToRoom(roomId)
+            }
+            catch (error) {
+                alert("Error creating a room")
+            }
+        }
+
+        function joinRoom() {
+            const roomId = prompt("Enter the room ID: ")
+            if (roomId && roomId.trim() !== '')
+                goToRoom(roomId.trim())
         }
 
         setConnected(false)
