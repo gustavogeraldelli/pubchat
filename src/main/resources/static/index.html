@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Public Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+
+    <div id="user-login">
+        <h2>Choose a nickname</h2>
+        <input type="text" id="sender" placeholder="Your nickname" required/>
+        <button id="connect" onclick="connect();">Connect</button>
+        <button id="disconnect" disabled="disabled" onclick="disconnect();">Disconnect</button>
+    </div>
+    <br>
+    <div id="chat-div" style="visibility: hidden">
+        <h2>Public chat</h2>
+        <input type="text" id="message" placeholder="Write a message..."/>
+        <button id="send" onclick="sendMessage();">Send</button>
+        <p id="response"></p>
+    </div>
+
+    <script>
+        let connectBtn = document.getElementById('connect')
+        let disconnectBtn = document.getElementById('disconnect')
+        let chatDiv = document.getElementById('chat-div')
+        let response = document.getElementById('response')
+        let sender = null
+        let message = document.getElementById('message')
+
+        let stompClient = null;
+
+        function setConnected(connected) {
+            connectBtn.disabled = connected
+            disconnectBtn.disabled = !connected
+            sender = document.getElementById('sender').value.trim()
+            chatDiv.style.visibility
+                = connected ? 'visible' : 'hidden'
+            response.innerHTML = ''
+        }
+
+        function connect() {
+            let socket = new SockJS('/pubchat-websocket')
+            stompClient = Stomp.over(socket)
+            stompClient.connect({}, function(frame) {
+                setConnected(true)
+                console.log('Connected: ' + frame)
+                stompClient.subscribe('/topic/global', function(messageOutput) {
+                    showMessageOutput(JSON.parse(messageOutput.body))
+                })
+            })
+        }
+
+        function disconnect() {
+            if (stompClient != null)
+                stompClient.disconnect()
+            setConnected(false)
+            console.log("Disconnected")
+        }
+
+        function sendMessage() {
+            let msgText = message.value
+            stompClient.send("/pubchat/chat", {},
+                JSON.stringify({'sender':sender, 'message':msgText}))
+            message.value = ''
+        }
+
+        function showMessageOutput(messageOutput) {
+            let p = document.createElement('p')
+            p.appendChild(document.createTextNode(messageOutput.sender + ": "
+                + messageOutput.message))
+            response.appendChild(p)
+        }
+    </script>
+
+</body>
+</html>
