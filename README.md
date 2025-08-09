@@ -3,7 +3,9 @@ Study project to explore and practice real-time communication using Spring Boot 
 
 As a study project, several simplifications were made, but the core concept was successfully implemented.
 
-![](/readme-assets/use.gif)
+<p align="center">
+  <img src="readme-assets/use.gif">
+</p>
 
 ## Technologies
 - Spring Web
