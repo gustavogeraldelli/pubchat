@@ -1,8 +1,9 @@
-# PubChat
-## About
-PubChat is a study project to explore and practice real-time communication using Spring Boot and WebSocket. The main goal was to learn the architecture behind a chat application, including the use of message brokers, dynamic topics, and basic state management.
+## About PubChat
+Study project to explore and practice real-time communication using Spring Boot and WebSocket. The main goal was to learn the architecture behind a chat application, including the use of message brokers, dynamic topics, and basic state management.
 
 As a study project, several simplifications were made, but the core concept was successfully implemented.
+
+![](/readme-assets/use.gif)
 
 ## Technologies
 - Spring Web
