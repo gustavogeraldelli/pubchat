@@ -7,7 +7,9 @@ public record Message(
 
     public enum MessageType {
         CHAT,
-        TYPING
+        TYPING,
+        JOIN,
+        LEAVE
     }
 
 }
