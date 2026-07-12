@@ -19,13 +19,13 @@ public class RoomController {
     @PostMapping("/rooms")
     public String createRoom() {
         var room = UUID.randomUUID().toString();
-        repository.addRoom(room);
+        repository.add(room);
         return room;
     }
 
     @GetMapping("/rooms/{room}/available")
     public ResponseEntity<Void> existsRoom(@PathVariable String room) {
-        if (repository.existsRoom(room))
+        if (repository.exists(room))
             return ResponseEntity.ok().build();
         return ResponseEntity.notFound().build();
     }

@@ -2,20 +2,24 @@ package dev.pubchat.repository;
 
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class RoomRepository {
 
-    private final List<String> rooms = new ArrayList<>();
+    private final Set<String> rooms = ConcurrentHashMap.newKeySet();
 
-    public void addRoom(String room) {
+    public void add(String room) {
         rooms.add(room);
     }
 
-    public boolean existsRoom(String room) {
+    public boolean exists(String room) {
         return rooms.contains(room);
+    }
+
+    public Set<String> getAll() {
+        return Set.copyOf(rooms);
     }
 
 }

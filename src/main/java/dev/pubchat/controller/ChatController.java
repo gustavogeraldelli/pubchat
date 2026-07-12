@@ -20,7 +20,7 @@ public class ChatController {
 
     @MessageMapping("/room/{roomId}")
     public void sendMessage(@DestinationVariable String roomId, Message message) {
-        if (!roomId.equals("global") && !repository.existsRoom(roomId))
+        if (!roomId.equals("global") && !repository.exists(roomId))
             return;
         String topic = "/topic/room/" + roomId;
         messagingTemplate.convertAndSend(topic, message);
@@ -28,7 +28,7 @@ public class ChatController {
 
     @MessageMapping("/typing/{roomId}")
     public void sendTypingStatus(@DestinationVariable String roomId, Message message) {
-        if (roomId.equals("global") || !repository.existsRoom(roomId))
+        if (roomId.equals("global") || !repository.exists(roomId))
             return;
         String topic = "/topic/room/" + roomId;
         messagingTemplate.convertAndSend(topic, message);
