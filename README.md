@@ -23,6 +23,6 @@ As a study project, several simplifications were made, but the core concept was 
 
 ## Limitations
 - In-memory room repository and in-memory message broker
+- Private rooms are temporary and inactive rooms are cleaned up automatically
 - No message persistence
 - No spam protection (messages and room creation)
-- No mechanism to clean up inactive rooms

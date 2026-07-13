@@ -22,6 +22,8 @@ public class ChatController {
     public void sendMessage(@DestinationVariable String roomId, Message message) {
         if (!roomId.equals("global") && !repository.exists(roomId))
             return;
+        if (!roomId.equals("global"))
+            repository.touch(roomId);
         String topic = "/topic/room/" + roomId;
         messagingTemplate.convertAndSend(topic, message);
     }
@@ -30,6 +32,7 @@ public class ChatController {
     public void sendTypingStatus(@DestinationVariable String roomId, Message message) {
         if (roomId.equals("global") || !repository.exists(roomId))
             return;
+        repository.touch(roomId);
         String topic = "/topic/room/" + roomId;
         messagingTemplate.convertAndSend(topic, message);
     }
