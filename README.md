@@ -35,9 +35,13 @@ WebSocket/STOMP:
 | Type | Destination | Description |
 | --- | --- | --- |
 | connect | `/ws` | Opens the WebSocket/STOMP connection |
+| send | `/app/chat/rooms/{roomId}/join` | Joins a room with a nickname |
 | send | `/app/chat/rooms/{roomId}/messages` | Sends a chat message |
 | send | `/app/chat/rooms/{roomId}/typing` | Sends a typing event |
+| send | `/app/chat/rooms/{roomId}/leave` | Leaves the current room |
 | subscribe | `/topic/rooms/{roomId}` | Receives room messages and events |
+
+The nickname is defined on join and stored in the WebSocket session. Message and typing payloads do not need to send `sender`.
 
 ## Limitations
 - In-memory room repository and in-memory message broker

@@ -41,8 +41,18 @@ public class Room {
         this.lastActivityAt = Instant.now();
     }
 
-    public void addParticipant(String nickname) {
-        participants.add(nickname);
-        touch();
+    public boolean addParticipant(String nickname) {
+        boolean added = participants.add(nickname);
+        if (added) touch();
+        return added;
+    }
+
+    public void removeParticipant(String nickname) {
+        if (participants.remove(nickname))
+            touch();
+    }
+
+    public boolean hasParticipant(String nickname) {
+        return participants.contains(nickname);
     }
 }

@@ -3,9 +3,9 @@ package dev.pubchat.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public record ChatMessageRequest(
+public record JoinRoomRequest(
         @NotBlank
-        @Size(max = 500)
-        String message
+        @Size(min = 2, max = 40)
+        String nickname
 ) {
 }

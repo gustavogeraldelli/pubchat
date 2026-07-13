@@ -16,4 +16,12 @@ public record Message(
     public static Message typing(String sender, String roomId) {
         return new Message(sender, roomId, null, MessageType.TYPING, Instant.now());
     }
+
+    public static Message join(String sender, String roomId) {
+        return new Message(sender, roomId, sender + " joined the room", MessageType.JOIN, Instant.now());
+    }
+
+    public static Message leave(String sender, String roomId) {
+        return new Message(sender, roomId, sender + " left the room", MessageType.LEAVE, Instant.now());
+    }
 }

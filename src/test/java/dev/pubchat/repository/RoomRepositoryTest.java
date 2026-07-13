@@ -80,4 +80,39 @@ class RoomRepositoryTest {
         assertThat(repository.exists("active-room")).isTrue();
         assertThat(repository.getAll()).containsExactly("active-room");
     }
+
+    @Test
+    void shouldAddParticipantToRoom() {
+        RoomRepository repository = new RoomRepository();
+        repository.add("room-1");
+
+        boolean added = repository.addParticipant("room-1", "Gus");
+
+        assertThat(added).isTrue();
+        assertThat(repository.hasParticipant("room-1", "Gus")).isTrue();
+        assertThat(repository.findById("room-1"))
+                .hasValueSatisfying(room -> assertThat(room.getParticipants()).containsExactly("Gus"));
+    }
+
+    @Test
+    void shouldRejectDuplicateParticipantNicknameInSameRoom() {
+        RoomRepository repository = new RoomRepository();
+        repository.add("room-1");
+
+        assertThat(repository.addParticipant("room-1", "Gus")).isTrue();
+        assertThat(repository.addParticipant("room-1", "Gus")).isFalse();
+    }
+
+    @Test
+    void shouldRemoveParticipantFromRoom() {
+        RoomRepository repository = new RoomRepository();
+        repository.add("room-1");
+        repository.addParticipant("room-1", "Gus");
+
+        repository.removeParticipant("room-1", "Gus");
+
+        assertThat(repository.hasParticipant("room-1", "Gus")).isFalse();
+        assertThat(repository.findById("room-1"))
+                .hasValueSatisfying(room -> assertThat(room.getParticipants()).isEmpty());
+    }
 }

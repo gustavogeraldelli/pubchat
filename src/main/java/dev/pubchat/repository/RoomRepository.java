@@ -33,8 +33,25 @@ public class RoomRepository {
     public void touch(String roomId) {
         findById(roomId).ifPresent(Room::touch);
     }
+
     public void deleteInactiveSince(Instant cutoff) {
         rooms.entrySet().removeIf(entry -> entry.getValue().getLastActivityAt().isBefore(cutoff));
+    }
+
+    public boolean addParticipant(String roomId, String nickname) {
+        return findById(roomId)
+                .map(room -> room.addParticipant(nickname))
+                .orElse(false);
+    }
+
+    public void removeParticipant(String roomId, String nickname) {
+        findById(roomId).ifPresent(room -> room.removeParticipant(nickname));
+    }
+
+    public boolean hasParticipant(String roomId, String nickname) {
+        return findById(roomId)
+                .map(room -> room.hasParticipant(nickname))
+                .orElse(false);
     }
 
     public Set<String> getAll() {
