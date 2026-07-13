@@ -71,7 +71,8 @@ public class ChatWsController {
         sessionAttributes.put(SESSION_ROOM_ID, roomId);
         sessionAttributes.put(SESSION_NICKNAME, nickname);
 
-        messagingTemplate.convertAndSend(topicFor(roomId), ChatMessageResponse.from(Message.join(nickname, roomId)));
+        if (!GLOBAL_ROOM.equals(roomId))
+            messagingTemplate.convertAndSend(topicFor(roomId), ChatMessageResponse.from(Message.join(nickname, roomId)));
     }
 
     @MessageMapping("/{roomId}/messages")
@@ -170,6 +171,9 @@ public class ChatWsController {
 
         if (!GLOBAL_ROOM.equals(roomId))
             repository.removeParticipant(roomId, nickname);
+
+        if (GLOBAL_ROOM.equals(roomId))
+            return;
 
         messagingTemplate.convertAndSend(topicFor(roomId), ChatMessageResponse.from(Message.leave(nickname, roomId)));
     }
