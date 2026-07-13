@@ -10,6 +10,7 @@ let stompClient = null
 let sender = null
 let currentRoom = 'global'
 let currentSub = null
+let errorSub = null
 let typingTimeout = null
 
 function setConnected(connected) {
@@ -33,13 +34,20 @@ function connect() {
     stompClient = Stomp.over(socket)
     stompClient.connect({}, function() {
         setConnected(true)
+        errorSub = stompClient.subscribe('/user/queue/errors', function(incomingMessage) {
+            displayError(JSON.parse(incomingMessage.body))
+        })
         goToRoom('global')
     })
 }
 
 function disconnect() {
+    if (errorSub)
+        errorSub.unsubscribe()
     if (stompClient != null)
         stompClient.disconnect()
+    errorSub = null
+    currentSub = null
     setConnected(false)
     console.log("Disconnected")
 }
@@ -48,15 +56,14 @@ function sendMessage() {
     let msgText = messageInput.value.trim()
     if (msgText) {
         stompClient.send(`/app/chat/rooms/${currentRoom}/messages`, {},
-            JSON.stringify({'sender': sender, 'message': msgText }))
+            JSON.stringify({'message': msgText }))
         messageInput.value = ''
     }
 }
 
 function sendTypingStatus() {
     if (stompClient && currentRoom !== 'global')
-        stompClient.send(`/app/chat/rooms/${currentRoom}/typing`, {},
-            JSON.stringify({'sender': sender}))
+        stompClient.send(`/app/chat/rooms/${currentRoom}/typing`, {}, JSON.stringify({}))
 }
 
 function displayMessage(incomingMessage) {
@@ -76,6 +83,12 @@ function displayMessage(incomingMessage) {
                 typingTimeout = setTimeout(() => { isTypingDiv.textContent = ''; }, 5000)
             }
     }
+}
+
+function displayError(error) {
+    alert(error.message)
+    if (error.action === 'join' && error.roomId === currentRoom && currentRoom !== 'global')
+        goToRoom('global')
 }
 
 function goToRoom(room) {
@@ -100,6 +113,8 @@ function goToRoom(room) {
     currentSub = stompClient.subscribe(`/topic/rooms/${room}`, function (incomingMessage) {
         displayMessage(JSON.parse(incomingMessage.body))
     })
+    stompClient.send(`/app/chat/rooms/${room}/join`, {},
+        JSON.stringify({'nickname': sender }))
 }
 
 async function createRoom() {

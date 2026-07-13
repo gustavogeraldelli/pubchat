@@ -2,6 +2,7 @@ package dev.pubchat.controller;
 
 import dev.pubchat.dto.ChatMessageRequest;
 import dev.pubchat.dto.ChatMessageResponse;
+import dev.pubchat.dto.ChatErrorResponse;
 import dev.pubchat.dto.JoinRoomRequest;
 import dev.pubchat.dto.TypingStatusRequest;
 import dev.pubchat.model.Message;
@@ -37,25 +38,30 @@ public class ChatWsController {
     public void joinRoom(@DestinationVariable String roomId, @Valid JoinRoomRequest request,
                          SimpMessageHeaderAccessor headers) {
         String nickname = request.nickname().trim();
-        if (!GLOBAL_ROOM.equals(roomId) && !repository.exists(roomId))
+        if (!GLOBAL_ROOM.equals(roomId) && !repository.exists(roomId)) {
+            sendErrorToSession(headers, roomId, "join", "Room does not exist.");
             return;
+        }
 
         Map<String, Object> sessionAttributes = headers.getSessionAttributes();
-        if (sessionAttributes == null)
+        if (sessionAttributes == null) {
+            sendErrorToSession(headers, roomId, "join", "Could not access the WebSocket session.");
             return;
+        }
 
         String currentRoomId = (String) sessionAttributes.get(SESSION_ROOM_ID);
         String currentNickname = (String) sessionAttributes.get(SESSION_NICKNAME);
         boolean rejoiningSameSession = roomId.equals(currentRoomId) && nickname.equals(currentNickname);
-
         if (rejoiningSameSession) {
             if (!GLOBAL_ROOM.equals(roomId))
                 repository.touch(roomId);
             return;
         }
 
-        if (!GLOBAL_ROOM.equals(roomId) && repository.hasParticipant(roomId, nickname) && !rejoiningSameSession)
+        if (!GLOBAL_ROOM.equals(roomId) && repository.hasParticipant(roomId, nickname) && !rejoiningSameSession) {
+            sendErrorToSession(headers, roomId, "join", "Nickname already in use in this room.");
             return;
+        }
 
         leaveCurrentRoom(sessionAttributes);
 
@@ -72,8 +78,20 @@ public class ChatWsController {
     public void sendMessage(@DestinationVariable String roomId, @Valid ChatMessageRequest request,
                             SimpMessageHeaderAccessor headers) {
         String nickname = nicknameFrom(headers);
-        if (nickname == null || !isRoomAvailable(roomId) || !isSessionInRoom(headers, roomId))
+        if (nickname == null) {
+            sendErrorToSession(headers, roomId, "message", "Join a room before sending messages.");
             return;
+        }
+
+        if (!isRoomAvailable(roomId)) {
+            sendErrorToSession(headers, roomId, "message", "Room does not exist.");
+            return;
+        }
+
+        if (!isSessionInRoom(headers, roomId)) {
+            sendErrorToSession(headers, roomId, "message", "You are not joined to this room.");
+            return;
+        }
 
         if (!GLOBAL_ROOM.equals(roomId))
             repository.touch(roomId);
@@ -86,8 +104,18 @@ public class ChatWsController {
     public void sendTypingStatus(@DestinationVariable String roomId, @Valid TypingStatusRequest request,
                                  SimpMessageHeaderAccessor headers) {
         String nickname = nicknameFrom(headers);
-        if (nickname == null || GLOBAL_ROOM.equals(roomId) || !isRoomAvailable(roomId) || !isSessionInRoom(headers, roomId))
+        if (nickname == null || GLOBAL_ROOM.equals(roomId))
             return;
+
+        if (!isRoomAvailable(roomId)) {
+            sendErrorToSession(headers, roomId, "typing", "Room does not exist.");
+            return;
+        }
+
+        if (!isSessionInRoom(headers, roomId)) {
+            sendErrorToSession(headers, roomId, "typing", "You are not joined to this room.");
+            return;
+        }
 
         repository.touch(roomId);
         Message message = Message.typing(nickname, roomId);
@@ -96,12 +124,16 @@ public class ChatWsController {
 
     @MessageMapping("/{roomId}/leave")
     public void leaveRoom(@DestinationVariable String roomId, SimpMessageHeaderAccessor headers) {
-        if (!isSessionInRoom(headers, roomId))
+        if (!isSessionInRoom(headers, roomId)) {
+            sendErrorToSession(headers, roomId, "leave", "You are not joined to this room.");
             return;
+        }
 
         Map<String, Object> sessionAttributes = headers.getSessionAttributes();
-        if (sessionAttributes == null)
+        if (sessionAttributes == null) {
+            sendErrorToSession(headers, roomId, "leave", "Could not access the WebSocket session.");
             return;
+        }
 
         publishLeave(sessionAttributes);
         sessionAttributes.remove(SESSION_ROOM_ID);
@@ -144,5 +176,22 @@ public class ChatWsController {
 
     private String topicFor(String roomId) {
         return "/topic/rooms/" + roomId;
+    }
+
+    private void sendErrorToSession(SimpMessageHeaderAccessor headers, String roomId, String action, String message) {
+        String sessionId = headers.getSessionId();
+        if (sessionId == null)
+            return;
+
+        SimpMessageHeaderAccessor outputHeaders = SimpMessageHeaderAccessor.create();
+        outputHeaders.setSessionId(sessionId);
+        outputHeaders.setLeaveMutable(true);
+
+        messagingTemplate.convertAndSendToUser(
+                sessionId,
+                "/queue/errors",
+                ChatErrorResponse.of(message, roomId, action),
+                outputHeaders.getMessageHeaders()
+        );
     }
 }
