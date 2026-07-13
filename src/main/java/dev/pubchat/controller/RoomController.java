@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/pubchat")
+@RequestMapping("/api/rooms")
 public class RoomController {
 
     private final RoomRepository repository;
@@ -16,14 +16,14 @@ public class RoomController {
         this.repository = repository;
     }
 
-    @PostMapping("/rooms")
+    @PostMapping
     public String createRoom() {
         var room = UUID.randomUUID().toString();
         repository.add(room);
         return room;
     }
 
-    @GetMapping("/rooms/{room}/available")
+    @GetMapping("/{room}/available")
     public ResponseEntity<Void> existsRoom(@PathVariable String room) {
         if (repository.exists(room))
             return ResponseEntity.ok().build();

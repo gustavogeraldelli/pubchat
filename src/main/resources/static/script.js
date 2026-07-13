@@ -29,7 +29,7 @@ function connect() {
         alert("Please, choose a nickname")
         return
     }
-    let socket = new SockJS('/pubchat-websocket')
+    let socket = new SockJS('/ws')
     stompClient = Stomp.over(socket)
     stompClient.connect({}, function() {
         setConnected(true)
@@ -47,7 +47,7 @@ function disconnect() {
 function sendMessage() {
     let msgText = messageInput.value.trim()
     if (msgText) {
-        stompClient.send(`/pubchat/room/${currentRoom}`, {},
+        stompClient.send(`/app/chat/rooms/${currentRoom}/messages`, {},
             JSON.stringify({'sender': sender, 'message': msgText }))
         messageInput.value = ''
     }
@@ -55,7 +55,7 @@ function sendMessage() {
 
 function sendTypingStatus() {
     if (stompClient && currentRoom !== 'global')
-        stompClient.send(`/pubchat/typing/${currentRoom}`, {},
+        stompClient.send(`/app/chat/rooms/${currentRoom}/typing`, {},
             JSON.stringify({'sender': sender}))
 }
 
@@ -97,14 +97,14 @@ function goToRoom(room) {
         document.getElementById('join-room').style.visibility = 'hidden'
     }
     currentRoom = room
-    currentSub = stompClient.subscribe(`/topic/room/${room}`, function (incomingMessage) {
+    currentSub = stompClient.subscribe(`/topic/rooms/${room}`, function (incomingMessage) {
         displayMessage(JSON.parse(incomingMessage.body))
     })
 }
 
 async function createRoom() {
     try {
-        const response = await fetch('/pubchat/rooms', { method: 'POST' })
+        const response = await fetch('/api/rooms', { method: 'POST' })
         const room = await response.text()
         alert("Private room created!\nID: " + room)
         goToRoom(room)
@@ -120,7 +120,7 @@ async function joinRoom() {
         room = room.trim()
         try {
             // users cant use any id to join private rooms
-            const available = await fetch(`/pubchat/rooms/${room}/available`)
+            const available = await fetch(`/api/rooms/${room}/available`)
             if (available.ok)
                 goToRoom(room)
             else

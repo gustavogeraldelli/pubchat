@@ -21,6 +21,24 @@ As a study project, several simplifications were made, but the core concept was 
 - Room validation: The backend prevents users from joining rooms with arbitrary or invalid IDs
 - 'User is typing' indicator in private rooms
 
+## API and WebSocket routes
+
+REST:
+
+| Method | Route | Description |
+| --- | --- | --- |
+| POST | `/api/rooms` | Creates a private room |
+| GET | `/api/rooms/{room}/available` | Checks whether a room exists |
+
+WebSocket/STOMP:
+
+| Type | Destination | Description |
+| --- | --- | --- |
+| connect | `/ws` | Opens the WebSocket/STOMP connection |
+| send | `/app/chat/rooms/{roomId}/messages` | Sends a chat message |
+| send | `/app/chat/rooms/{roomId}/typing` | Sends a typing event |
+| subscribe | `/topic/rooms/{roomId}` | Receives room messages and events |
+
 ## Limitations
 - In-memory room repository and in-memory message broker
 - Private rooms are temporary and inactive rooms are cleaned up automatically
