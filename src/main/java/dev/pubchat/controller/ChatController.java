@@ -1,13 +1,19 @@
 package dev.pubchat.controller;
 
+import dev.pubchat.dto.ChatMessageRequest;
+import dev.pubchat.dto.ChatMessageResponse;
+import dev.pubchat.dto.TypingStatusRequest;
 import dev.pubchat.model.Message;
 import dev.pubchat.repository.RoomRepository;
+import jakarta.validation.Valid;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import org.springframework.validation.annotation.Validated;
 
 @Controller
+@Validated
 public class ChatController {
 
     private final SimpMessagingTemplate messagingTemplate;
@@ -19,21 +25,23 @@ public class ChatController {
     }
 
     @MessageMapping("/room/{roomId}")
-    public void sendMessage(@DestinationVariable String roomId, Message message) {
+    public void sendMessage(@DestinationVariable String roomId, @Valid ChatMessageRequest request) {
         if (!roomId.equals("global") && !repository.exists(roomId))
             return;
         if (!roomId.equals("global"))
             repository.touch(roomId);
+        Message message = Message.chat(request.sender().trim(), roomId, request.message().trim());
         String topic = "/topic/room/" + roomId;
-        messagingTemplate.convertAndSend(topic, message);
+        messagingTemplate.convertAndSend(topic, ChatMessageResponse.from(message));
     }
 
     @MessageMapping("/typing/{roomId}")
-    public void sendTypingStatus(@DestinationVariable String roomId, Message message) {
+    public void sendTypingStatus(@DestinationVariable String roomId, @Valid TypingStatusRequest request) {
         if (roomId.equals("global") || !repository.exists(roomId))
             return;
         repository.touch(roomId);
+        Message message = Message.typing(request.sender().trim(), roomId);
         String topic = "/topic/room/" + roomId;
-        messagingTemplate.convertAndSend(topic, message);
+        messagingTemplate.convertAndSend(topic, ChatMessageResponse.from(message));
     }
 }

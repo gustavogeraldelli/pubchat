@@ -48,7 +48,7 @@ function sendMessage() {
     let msgText = messageInput.value.trim()
     if (msgText) {
         stompClient.send(`/pubchat/room/${currentRoom}`, {},
-            JSON.stringify({'sender': sender, 'message': msgText, 'type': 'CHAT' }))
+            JSON.stringify({'sender': sender, 'message': msgText }))
         messageInput.value = ''
     }
 }
@@ -56,7 +56,7 @@ function sendMessage() {
 function sendTypingStatus() {
     if (stompClient && currentRoom !== 'global')
         stompClient.send(`/pubchat/typing/${currentRoom}`, {},
-            JSON.stringify({'sender': sender, 'type': 'TYPING'}))
+            JSON.stringify({'sender': sender}))
 }
 
 function displayMessage(incomingMessage) {
