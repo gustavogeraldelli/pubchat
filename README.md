@@ -1,50 +1,95 @@
-## About PubChat
-Study project to explore and practice real-time communication using Spring Boot and WebSocket. The main goal was to learn the architecture behind a chat application, including the use of message brokers, dynamic topics, and basic state management.
+# PubChat
 
-As a study project, several simplifications were made, but the core concept was successfully implemented.
+Real-time chat application built with Spring Boot, WebSocket, STOMP, and a lightweight HTML/CSS/JavaScript frontend.
 
-<p align="center">
-  <img src="readme-assets/use.gif">
-</p>
+The application supports a public global chat, temporary private rooms, typing indicators, session-based sender identification, and private error messages for invalid WebSocket actions.
 
-## Technologies
+## Features
+
+- Public global chat
+- Temporary private rooms
+- Room creation and validation through REST
+- WebSocket/STOMP chat messages
+- Typing indicator in private rooms
+- Join and leave events for private rooms
+- Duplicate nickname prevention per private room
+- Session-scoped error messages through `/user/queue/errors`
+- Automatic cleanup of inactive private rooms
+- Behavior-focused tests for repository, REST, and WebSocket flows
+
+## Stack
+
+- Java 21
+- Spring Boot
 - Spring Web
 - Spring WebSocket
 - STOMP
-- In-Memory Message Broker
-- HTML, CSS e JavaScript for the basic frontend
-- SockJS e Stomp.js
+- SockJS
+- Stomp.js
+- HTML, CSS, JavaScript
+- JUnit 5, AssertJ, Mockito, MockMvc
 
-## Features
-- Global chat: Upon connecting, the user joins a public room where all connected users can chat
-- Private rooms: Users can generate a unique ID for a private room via a REST endpoint, allowing others to connect using that ID
-- Room validation: The backend prevents users from joining rooms with arbitrary or invalid IDs
-- 'User is typing' indicator in private rooms
+## Running
 
-## API and WebSocket routes
+```bash
+./mvnw spring-boot:run
+```
 
-REST:
+Application:
+
+```text
+http://localhost:8080
+```
+
+## Testing
+
+```bash
+./mvnw test
+```
+
+Current coverage includes:
+
+- room storage and metadata
+- inactive room cleanup
+- participant tracking
+- duplicate nickname rejection
+- REST room creation and validation
+- WebSocket join, message, leave, and private error behavior
+
+## API and Messaging
+
+REST is used for private room management:
 
 | Method | Route | Description |
 | --- | --- | --- |
-| POST | `/api/rooms` | Creates a private room |
-| GET | `/api/rooms/{room}/available` | Checks whether a room exists |
+| `POST` | `/api/rooms` | Creates a private room |
+| `GET` | `/api/rooms/{roomId}/available` | Checks whether a private room exists |
 
-WebSocket/STOMP:
+WebSocket/STOMP is used for real-time room activity:
 
 | Type | Destination | Description |
 | --- | --- | --- |
 | connect | `/ws` | Opens the WebSocket/STOMP connection |
-| send | `/app/chat/rooms/{roomId}/join` | Joins a room with a nickname |
+| send | `/app/chat/rooms/{roomId}/join` | Joins a room |
 | send | `/app/chat/rooms/{roomId}/messages` | Sends a chat message |
 | send | `/app/chat/rooms/{roomId}/typing` | Sends a typing event |
 | send | `/app/chat/rooms/{roomId}/leave` | Leaves the current room |
 | subscribe | `/topic/rooms/{roomId}` | Receives room messages and events |
+| subscribe | `/user/queue/errors` | Receives private errors for the current session |
 
-The nickname is defined on join and stored in the WebSocket session. Message and typing payloads do not need to send `sender`.
+`RoomRepository` keeps private room state, metadata, and participants in memory.
+
+## Notes
+
+- The sender is not trusted from the message payload. The backend resolves the nickname from the WebSocket session.
+- The global room is not stored in `RoomRepository`.
+- Join/leave presence events are published only for private rooms.
+- Private validation errors are sent to the current WebSocket session, not to the room topic.
 
 ## Limitations
-- In-memory room repository and in-memory message broker
-- Private rooms are temporary and inactive rooms are cleaned up automatically
+
+- In-memory state only
 - No message persistence
-- No spam protection (messages and room creation)
+- No authentication
+- No rate limiting
+- Not designed for multiple application instances
