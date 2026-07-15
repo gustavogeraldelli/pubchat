@@ -26,6 +26,11 @@ let currentSub = null
 let errorSub = null
 let typingTimeout = null
 let noticeTimeout = null
+let typingSendTimeout = null
+let lastTypingSentAt = 0
+
+const typingDebounceMs = 400
+const typingThrottleMs = 1500
 
 function setConnected(connected) {
     userLoginDiv.hidden = connected
@@ -67,6 +72,8 @@ function disconnect() {
     if (currentRoom !== 'global')
         leaveCurrentRoom()
 
+    clearTimeout(typingSendTimeout)
+    clearTimeout(typingTimeout)
     if (errorSub)
         errorSub.unsubscribe()
     if (stompClient != null)
@@ -76,6 +83,7 @@ function disconnect() {
     currentSub = null
     stompClient = null
     currentRoom = 'global'
+    lastTypingSentAt = 0
     roomIdInput.value = ''
     setConnected(false)
 }
@@ -91,8 +99,27 @@ function sendMessage() {
 }
 
 function sendTypingStatus() {
-    if (stompClient && currentRoom !== 'global')
-        stompClient.send(`/app/chat/rooms/${currentRoom}/typing`, {}, JSON.stringify({}))
+    if (!stompClient || currentRoom === 'global')
+        return
+
+    let now = Date.now()
+    let nextAllowedAt = lastTypingSentAt + typingThrottleMs
+
+    clearTimeout(typingSendTimeout)
+    if (now >= nextAllowedAt) {
+        typingSendTimeout = setTimeout(sendTypingEvent, typingDebounceMs)
+        return
+    }
+
+    typingSendTimeout = setTimeout(sendTypingEvent, nextAllowedAt - now)
+}
+
+function sendTypingEvent() {
+    if (!stompClient || currentRoom === 'global')
+        return
+
+    stompClient.send(`/app/chat/rooms/${currentRoom}/typing`, {}, JSON.stringify({}))
+    lastTypingSentAt = Date.now()
 }
 
 function displayMessage(incomingMessage) {
@@ -156,8 +183,10 @@ function goToRoom(room) {
     if (currentSub)
         currentSub.unsubscribe()
 
+    clearTimeout(typingSendTimeout)
     responseDiv.innerHTML = ''
     isTypingDiv.textContent = ''
+    lastTypingSentAt = 0
     currentRoom = room
     updateRoomUi()
 
