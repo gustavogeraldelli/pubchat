@@ -7,6 +7,7 @@ import dev.pubchat.dto.JoinRoomRequest;
 import dev.pubchat.dto.TypingStatusRequest;
 import dev.pubchat.model.Message;
 import dev.pubchat.repository.RoomRepository;
+import dev.pubchat.service.RateLimitService;
 import jakarta.validation.Valid;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -28,10 +29,13 @@ public class ChatWsController {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final RoomRepository repository;
+    private final RateLimitService rateLimitService;
 
-    public ChatWsController(SimpMessagingTemplate messagingTemplate,  RoomRepository repository) {
+    public ChatWsController(SimpMessagingTemplate messagingTemplate, RoomRepository repository,
+                            RateLimitService rateLimitService) {
         this.messagingTemplate = messagingTemplate;
         this.repository = repository;
+        this.rateLimitService = rateLimitService;
     }
 
     @MessageMapping("/{roomId}/join")
@@ -91,6 +95,12 @@ public class ChatWsController {
 
         if (!isSessionInRoom(headers, roomId)) {
             sendErrorToSession(headers, roomId, "message", "You are not joined to this room.");
+            return;
+        }
+
+        String sessionId = headers.getSessionId();
+        if (!rateLimitService.allowMessage(sessionId)) {
+            sendErrorToSession(headers, roomId, "message", "You are sending messages too quickly.");
             return;
         }
 

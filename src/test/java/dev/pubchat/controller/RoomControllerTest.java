@@ -1,6 +1,7 @@
 package dev.pubchat.controller;
 
 import dev.pubchat.repository.RoomRepository;
+import dev.pubchat.service.RateLimitService;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -13,8 +14,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class RoomControllerTest {
 
     private final RoomRepository repository = new RoomRepository();
+    private final RateLimitService rateLimitService = new RateLimitService();
     private final MockMvc mockMvc = MockMvcBuilders
-            .standaloneSetup(new RoomController(repository))
+            .standaloneSetup(new RoomController(repository, rateLimitService))
             .build();
 
     @Test
@@ -41,5 +43,19 @@ class RoomControllerTest {
     void shouldReturnNotFoundWhenRoomDoesNotExist() throws Exception {
         mockMvc.perform(get("/api/rooms/missing-room/available"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldRateLimitRoomCreationByClientIp() throws Exception {
+        for (int i = 0; i < 5; i++)
+            mockMvc.perform(post("/api/rooms").with(request -> {
+                request.setRemoteAddr("10.0.0.1");
+                return request;
+            })).andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/rooms").with(request -> {
+            request.setRemoteAddr("10.0.0.1");
+            return request;
+        })).andExpect(status().isTooManyRequests());
     }
 }

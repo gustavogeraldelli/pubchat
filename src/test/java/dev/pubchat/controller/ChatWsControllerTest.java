@@ -6,6 +6,7 @@ import dev.pubchat.dto.ChatMessageResponse;
 import dev.pubchat.dto.JoinRoomRequest;
 import dev.pubchat.model.MessageType;
 import dev.pubchat.repository.RoomRepository;
+import dev.pubchat.service.RateLimitService;
 import org.junit.jupiter.api.Test;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -19,13 +20,15 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 class ChatWsControllerTest {
 
     private final SimpMessagingTemplate messagingTemplate = mock(SimpMessagingTemplate.class);
     private final RoomRepository repository = new RoomRepository();
-    private final ChatWsController controller = new ChatWsController(messagingTemplate, repository);
+    private final RateLimitService rateLimitService = new RateLimitService();
+    private final ChatWsController controller = new ChatWsController(messagingTemplate, repository, rateLimitService);
 
     @Test
     void shouldStoreSessionButNotPublishJoinWhenJoiningGlobalRoom() {
@@ -84,6 +87,27 @@ class ChatWsControllerTest {
         verify(messagingTemplate).convertAndSend(
                 eq("/topic/rooms/global"),
                 argThat((Object payload) -> isResponse(payload, "Gus", MessageType.CHAT))
+        );
+    }
+
+    @Test
+    void shouldSendPrivateErrorWhenMessageRateLimitIsExceeded() {
+        SimpMessageHeaderAccessor headers = headers("session-rate-limit");
+        headers.getSessionAttributes().put(ChatWsController.SESSION_ROOM_ID, "global");
+        headers.getSessionAttributes().put(ChatWsController.SESSION_NICKNAME, "Gus");
+
+        for (int i = 0; i < 11; i++)
+            controller.sendMessage("global", new ChatMessageRequest("hello " + i), headers);
+
+        verify(messagingTemplate, times(10)).convertAndSend(
+                eq("/topic/rooms/global"),
+                argThat((Object payload) -> isResponse(payload, "Gus", MessageType.CHAT))
+        );
+        verify(messagingTemplate).convertAndSendToUser(
+                eq("session-rate-limit"),
+                eq("/queue/errors"),
+                argThat(payload -> isError(payload, "You are sending messages too quickly.", "global", "message")),
+                anyMap()
         );
     }
 
