@@ -25,6 +25,7 @@
             --accent-strong: #ffffff;
             --danger: #ff7777;
             --warning: #c9b878;
+            --success: #6fe0c1;
             --shadow: 0 28px 90px rgba(0, 0, 0, 0.46);
         }
 
@@ -165,7 +166,7 @@
 
         .inline-feedback.success,
         .notice.success {
-            color: #6fe0c1;
+            color: var(--success);
         }
 
         .chat-view {
@@ -236,6 +237,42 @@
             display: flex;
             gap: 10px;
             min-width: 0;
+        }
+
+        .share-room {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 10px;
+            grid-column: 1 / -1;
+            align-items: center;
+        }
+
+        .room-id-display {
+            min-width: 0;
+            min-height: 42px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--field);
+            padding: 0 12px;
+            color: var(--text);
+        }
+
+        .room-id-label {
+            flex: 0 0 auto;
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
+
+        .room-id-value {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.9rem;
         }
 
         .notice {
@@ -353,7 +390,8 @@
             }
 
             .join-form,
-            .composer {
+            .composer,
+            .share-room {
                 grid-template-columns: 1fr;
                 display: grid;
             }
@@ -401,6 +439,13 @@
                     <button id="join-room" type="submit">Join</button>
                 </form>
                 <button id="leave-room" class="ghost" type="button" hidden>Back to global</button>
+                <div id="share-room" class="share-room" hidden>
+                    <div class="room-id-display">
+                        <span class="room-id-label">Room ID</span>
+                        <span id="current-room-id" class="room-id-value"></span>
+                    </div>
+                    <button id="copy-room-id" type="button">Copy ID</button>
+                </div>
             </div>
 
             <p id="notice" class="notice"></p>

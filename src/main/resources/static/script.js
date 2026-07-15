@@ -15,6 +15,9 @@ const joinRoomForm = document.getElementById('join-room-form')
 const leaveRoomButton = document.getElementById('leave-room')
 const disconnectButton = document.getElementById('disconnect')
 const composerForm = document.getElementById('composer-form')
+const shareRoomDiv = document.getElementById('share-room')
+const currentRoomIdSpan = document.getElementById('current-room-id')
+const copyRoomIdButton = document.getElementById('copy-room-id')
 
 let stompClient = null
 let sender = null
@@ -228,6 +231,8 @@ function updateRoomUi() {
     createRoomButton.hidden = !isGlobal
     joinRoomForm.hidden = !isGlobal
     leaveRoomButton.hidden = isGlobal
+    shareRoomDiv.hidden = isGlobal
+    currentRoomIdSpan.textContent = isGlobal ? '' : currentRoom
 }
 
 function setLoginFeedback(message, type) {
@@ -248,6 +253,33 @@ function scrollMessagesToBottom() {
     responseDiv.scrollTop = responseDiv.scrollHeight
 }
 
+async function copyRoomId() {
+    if (currentRoom === 'global')
+        return
+
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(currentRoom)
+        }
+        else {
+            const tempInput = document.createElement('input')
+            tempInput.value = currentRoom
+            tempInput.setAttribute('readonly', '')
+            tempInput.style.position = 'fixed'
+            tempInput.style.opacity = '0'
+            document.body.appendChild(tempInput)
+            tempInput.select()
+            document.execCommand('copy')
+            tempInput.remove()
+        }
+
+        setNotice('Room ID copied.', 'success')
+    }
+    catch (error) {
+        setNotice('Could not copy room ID.', 'error')
+    }
+}
+
 loginForm.addEventListener('submit', function(event) {
     event.preventDefault()
     connect()
@@ -265,6 +297,7 @@ composerForm.addEventListener('submit', function(event) {
 
 messageInput.addEventListener('input', sendTypingStatus)
 createRoomButton.addEventListener('click', createRoom)
+copyRoomIdButton.addEventListener('click', copyRoomId)
 leaveRoomButton.addEventListener('click', function() {
     backToGlobal()
 })
