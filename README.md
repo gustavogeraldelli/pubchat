@@ -17,7 +17,17 @@ The application supports a public global chat, temporary private rooms, typing i
 - Automatic cleanup of inactive private rooms
 - Behavior-focused tests for repository, REST, and WebSocket flows
 
-## Stack
+## Screenshots
+
+### Global chat
+
+<img src="docs/global-chat.png" alt="Global chat" width="70%">
+
+### Private room
+
+<img src="docs/private-room.png" alt="Private room" width="70%">
+
+## Stac
 
 - Java 21
 - Spring Boot
